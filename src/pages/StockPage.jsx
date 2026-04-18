@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { downloadBlob, downloadSampleCSV } from '../utils/download';
 import ExcelFormatCard from '../components/ExcelFormatCard';
+import { validateFile } from '../utils/fileValidation';
 
 const STOCK_HEADERS = [
   'Brand',
@@ -18,23 +19,30 @@ const STOCK_HEADERS = [
 const StockPage = () => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
-    const isValid = selectedFiles.every(file => {
-      const fileName = file.name.split('.')[0];
-      return /^[a-zA-Z0-9_-]+$/.test(fileName);
-    });
+    if (selectedFiles.length === 0) return;
 
-    if (!isValid) {
-      toast.error('File name should not contain spaces and only special characters allowed are _ and -');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
-    if (selectedFiles.length > 0) {
+    setValidating(true);
+    try {
+      for (const file of selectedFiles) {
+        const result = await validateFile(file, 'stock', STOCK_HEADERS);
+        if (!result.isValid) {
+          toast.error(result.error);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          setFiles([]);
+          return;
+        }
+      }
       setFiles(selectedFiles);
+      toast.success(`${selectedFiles.length} files validated and ready`);
+    } catch (error) {
+      toast.error('Error validating files');
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -124,18 +132,18 @@ const StockPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={(e) => { e.stopPropagation(); handleProcess('/stock/consolidate', 'consolidated_stock.xlsx'); }}
-              disabled={loading}
+              disabled={loading || validating || files.length === 0}
               className="flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-semibold hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none group"
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles className="text-blue-400 group-hover:animate-pulse" size={20} />}
+              {loading || validating ? <Loader2 className="animate-spin" size={20} /> : <Sparkles className="text-blue-400 group-hover:animate-pulse" size={20} />}
               <span>Consolidate</span>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleProcess('/stock/category-summary', 'category_summary.xlsx'); }}
-              disabled={loading}
+              disabled={loading || validating || files.length === 0}
               className="flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none group shadow-lg shadow-blue-500/20"
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <FileText className="text-blue-200" size={20} />}
+              {loading || validating ? <Loader2 className="animate-spin" size={20} /> : <FileText className="text-blue-200" size={20} />}
               <span>Summary</span>
             </button>
           </div>

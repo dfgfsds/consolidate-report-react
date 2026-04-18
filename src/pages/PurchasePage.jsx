@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { downloadBlob, downloadSampleCSV } from '../utils/download';
 import ExcelFormatCard from '../components/ExcelFormatCard';
+import { validateFile } from '../utils/fileValidation';
 
 const PURCHASE_HEADERS = [
   'Company Name',
@@ -16,18 +17,28 @@ const PURCHASE_HEADERS = [
 const PurchasePage = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      const fileName = selectedFile.name.split('.')[0];
-      if (!/^[a-zA-Z0-9_-]+$/.test(fileName)) {
-        toast.error('File name should not contain spaces and only special characters allowed are _ and -');
+    if (!selectedFile) return;
+
+    setValidating(true);
+    try {
+      const result = await validateFile(selectedFile, 'purchase', PURCHASE_HEADERS);
+      if (!result.isValid) {
+        toast.error(result.error);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        setFile(null);
         return;
       }
       setFile(selectedFile);
+      toast.success('File validated successfully');
+    } catch (error) {
+      toast.error('Error validating file');
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -120,13 +131,13 @@ const PurchasePage = () => {
 
               <button
                 onClick={(e) => { e.stopPropagation(); handleUpload(); }}
-                disabled={loading || !file}
+                disabled={loading || validating || !file}
                 className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3"
               >
-                {loading ? (
+                {loading || validating ? (
                   <>
                     <Loader2 className="animate-spin" size={24} />
-                    <span>Uploading...</span>
+                    <span>{validating ? 'Validating...' : 'Uploading...'}</span>
                   </>
                 ) : (
                   <span>Upload Purchase</span>

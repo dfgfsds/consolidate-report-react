@@ -2,7 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: 'https://consolidate-report-api.ftdigitalsolutions.org',
+  baseURL: 'https://consolidate-report-api.ftdigitalsolutions.org/api',
 });
 
 // Interceptor for errors

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Download, Trash2, Loader2, Search, Filter, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -8,6 +8,7 @@ const ReportsPage = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchReports = async () => {
     setLoading(true);
@@ -62,6 +63,13 @@ const ReportsPage = () => {
     }
   };
 
+  const filteredReports = useMemo(() => {
+    if (!searchTerm) return reports;
+    return reports.filter((report) =>
+      report.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [reports, searchTerm]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -69,8 +77,18 @@ const ReportsPage = () => {
           <h2 className="text-2xl font-bold text-gray-900">Generated Reports</h2>
           <p className="text-gray-500 text-sm">Manage and download your processed archive.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={fetchReports} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 flex items-center gap-2 text-sm font-medium border border-gray-200 px-4">
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search reports by name..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button onClick={fetchReports} className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-600 flex items-center gap-2 text-sm font-medium border border-gray-200 px-4 whitespace-nowrap">
             <Filter size={18} />
             Refresh
           </button>
@@ -92,9 +110,25 @@ const ReportsPage = () => {
             Your generated reports will appear here once you process some stock, sales, or purchase data.
           </p>
         </div>
+      ) : filteredReports.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 border-dashed">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-6">
+            <Search size={40} />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900">No reports found</h3>
+          <p className="text-gray-500 mt-2 max-w-sm text-center">
+            We couldn't find any reports matching "{searchTerm}". Try a different search term.
+          </p>
+          <button 
+            onClick={() => setSearchTerm('')}
+            className="mt-6 text-blue-600 font-medium hover:underline text-sm"
+          >
+            Clear Search
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reports.map((report) => (
+          {filteredReports.map((report) => (
             <div 
               key={report} 
               className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group relative overflow-hidden"
