@@ -11,7 +11,8 @@ const SALES_HEADERS = [
   'Bill Date',
   'Customer Code',
   'Bill Amount Before GST',
-  'GST Amount'
+  'GST Amount',
+  'Bill Amount'
 ];
 
 const SalesPage = () => {
